@@ -68,15 +68,17 @@ class Tracker:
             if track_id not in self.track_history:
                 self.track_history[track_id] = []
             
-            self.track_history[track_id].append({
+            track_data = {
                 'frame': self.frame_count,
                 'bbox': bbox.tolist(),
-                'class_name': track.det_class
-            })
+                'class_name': track.det_class,
+                'confidence': track.get_det_conf() if hasattr(track, 'get_det_conf') else 0.5
+            }
+            self.track_history[track_id].append(track_data)
             
             # Keep only recent history
-            if len(self.track_history[track_id]) > 30:
-                self.track_history[track_id] = self.track_history[track_id][-30:]
+            if len(self.track_history[track_id]) > 50:
+                self.track_history[track_id] = self.track_history[track_id][-50:]
             
             tracked_object = {
                 'track_id': track_id,

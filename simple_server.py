@@ -200,28 +200,58 @@ async def upload_video(file: UploadFile = File(...)):
                 # Convert to dashboard format
                 formatted_violations = []
                 for i, violation in enumerate(violations[:50]):
+                    # Skip if no meaningful data
+                    if not violation.get('plate_number') and not violation.get('speed'):
+                        continue
+                        
+                    # Get unique violations only (avoid duplicates)
+                    violation_key = f"{violation['type']}_{violation.get('track_id', i)}"
+                    
                     formatted_violations.append({
                         "id": i + 1,
                         "type": violation['type'],
-                        "plate_number": violation.get('plate_number', 'DEMO123'),
-                        "speed": 65 if violation['type'] == 'overspeed' else 45,
-                        "speed_limit": 50,
+                        "plate_number": violation.get('plate_number', 'Unknown'),
+                        "speed": violation.get('speed', 'N/A'),
+                        "speed_limit": violation.get('speed_limit', 50),
                         "timestamp": violation['timestamp'],
                         "location": "Uploaded Video",
-                        "confidence": violation['confidence']
+                        "confidence": violation['confidence'],
+                        "track_id": violation.get('track_id', 'N/A')
+                        "track_id": violation.get('track_id', 'N/A')
                     })
                 
+                # Remove duplicates
+                unique_violations = []
+                seen_violations = set()
+                
+                for violation in formatted_violations:
+                    key = f"{violation['type']}_{violation['track_id']}"
+                    if key not in seen_violations:
+                        seen_violations.add(key)
+                        unique_violations.append(violation)
+                
+                # Remove duplicates based on track_id and violation type
+                unique_violations = []
+                seen_violations = set()
+                
+                for violation in formatted_violations:
+                    key = f"{violation['type']}_{violation['track_id']}"
+                    if key not in seen_violations:
+                        seen_violations.add(key)
+                        unique_violations.append(violation)
+                
+                return unique_violations
                 # Update global violations
                 global real_violations
-                real_violations = formatted_violations
+                real_violations = unique_violations
                 
-                print(f"✅ Updated global violations: {len(formatted_violations)} violations")
+                print(f"✅ Updated global violations: {len(unique_violations)} violations")
                 
                 return {
                     "message": "Video processed successfully",
                     "filename": file.filename,
                     "status": "completed",
-                    "violations_detected": len(formatted_violations),
+                    "violations_detected": len(unique_violations),
                     "output_video": f"{output_dir}/detected_{Path(file.filename).stem}.mp4"
                 }
             else:
